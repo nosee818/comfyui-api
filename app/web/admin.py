@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import BaseModel
 
 from app.manager.config_manager import config_manager
 from app.manager.server_manager import server_manager
@@ -160,6 +161,28 @@ async def add_server(
 ):
     server = server_manager.add_server(name=name, host=host, port=port)
     return {"ok": True, "server": server.model_dump()}
+
+
+class BatchServerItem(BaseModel):
+    host: str
+    port: int = 8188
+    name: str = ""
+
+
+@admin_router.post("/api/servers/batch")
+async def batch_add_servers(items: list[BatchServerItem]):
+    existing = {(s.host, s.port) for s in server_manager.get_all_servers()}
+    count = 0
+    skipped = 0
+    for item in items:
+        if (item.host, item.port) in existing:
+            skipped += 1
+            continue
+        name = item.name or f"ComfyUI-{item.port}"
+        server_manager.add_server(name=name, host=item.host, port=item.port)
+        existing.add((item.host, item.port))
+        count += 1
+    return {"ok": True, "count": count, "skipped": skipped}
 
 
 @admin_router.delete("/api/servers/{server_id}")

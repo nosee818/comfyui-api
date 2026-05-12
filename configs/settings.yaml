@@ -1,10 +1,7 @@
-# ComfyUI API Gateway 全局设置
-# 通过 Web 管理面板配置，或手动编辑此文件
-
 llm:
-  provider: "openai"            # openai | ollama | custom
-  api_base: "https://api.openai.com/v1"
-  api_key: ""                   # 留空则从环境变量 OPENAI_API_KEY 读取
-  model: "gpt-4o-mini"
+  provider: custom
+  api_base: http://10.192.5.131:1235/v1
+  api_key: ''
+  model: Qwen3.6-27B
   temperature: 0.1
   max_tokens: 2048

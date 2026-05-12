@@ -12,6 +12,12 @@
         .add-form input { width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 14px; }
         .add-form input:focus { outline: none; border-color: var(--accent); }
         .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .batch-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+        .batch-box textarea { width: 100%; min-height: 80px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; font-family: "SFMono-Regular", Consolas, monospace; resize: vertical; }
+        .batch-box textarea:focus { outline: none; border-color: var(--accent); }
+        .result-msg { margin-top: 8px; font-size: 13px; display: none; }
+        .result-msg.ok { color: var(--green); display: block; }
+        .result-msg.err { color: var(--red); display: block; }
     </style>
 </head>
 <body>
@@ -33,7 +39,20 @@
             <button class="btn btn-primary" onclick="checkServers()">立即检查</button>
         </div>
 
-        <!-- 添加服务器 -->
+        <!-- 批量导入 -->
+        <div class="batch-box">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <label style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">批量导入</label>
+                <span class="hint">格式：IP:端口 每行一个，如 10.192.6.192:8188</span>
+            </div>
+            <textarea id="batch-input" placeholder="10.192.6.192:8188&#10;10.192.6.192:8189&#10;10.192.5.100:8188"></textarea>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+                <button class="btn btn-primary" onclick="batchImport()">批量导入</button>
+                <span id="batch-result" class="result-msg"></span>
+            </div>
+        </div>
+
+        <!-- 单个添加 -->
         <form class="add-form" onsubmit="addServer(event)">
             <div class="form-group">
                 <label>名称</label>
@@ -95,6 +114,40 @@
             const resp = await fetch('/api/servers', { method: 'POST', body: fd });
             if (resp.ok) { location.reload(); }
             else { alert('添加失败'); }
+        }
+
+        async function batchImport() {
+            const text = document.getElementById('batch-input').value.trim();
+            if (!text) return;
+            const lines = text.split('\n').filter(l => l.trim());
+            const servers = [];
+            const seen = new Set();
+            for (const line of lines) {
+                const parts = line.trim().split(':');
+                const host = parts[0].trim();
+                const port = parseInt(parts[1]) || 8188;
+                const key = host + ':' + port;
+                if (host && !seen.has(key)) {
+                    seen.add(key);
+                    servers.push({ host, port, name: 'ComfyUI-' + port });
+                }
+            }
+            if (!servers.length) return;
+
+            const result = document.getElementById('batch-result');
+            result.textContent = '导入中...'; result.className = 'result-msg'; result.style.display = 'block';
+
+            const resp = await fetch('/api/servers/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(servers)
+            });
+            const data = await resp.json();
+            result.className = data.ok ? 'result-msg ok' : 'result-msg err';
+            result.textContent = data.ok
+                ? `成功导入 ${data.count} 个服务器` + (data.skipped ? `，跳过 ${data.skipped} 个重复` : '')
+                : data.message || '导入失败';
+            if (data.ok) setTimeout(() => location.reload(), 800);
         }
 
         async function deleteServer(id) {

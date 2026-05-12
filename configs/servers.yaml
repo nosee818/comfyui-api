@@ -1,10 +1,11 @@
-# ComfyUI 后端服务器列表
-# 通过 Web 管理面板添加，或手动按以下格式配置：
-#
-# servers:
-#   - id: "server-1"
-#     name: "主服务器"
-#     host: "10.192.6.192"
-#     port: 8188
-#     enabled: true
-servers: []
+servers:
+- id: server-38bff4
+  name: 192-01
+  host: 10.192.6.192
+  port: 8188
+  enabled: true
+- id: server-80fb6f
+  name: 192-02
+  host: 10.192.6.192
+  port: 8189
+  enabled: true
