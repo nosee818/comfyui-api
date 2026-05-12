@@ -77,20 +77,41 @@ class ConfigManager:
 
     def save(self, config: WorkflowConfig):
         """保存 config 到 YAML 文件（用于管理面板）"""
+        self._write_yaml(config)
+        self._configs[config.route] = config
+        logger.info(f"Saved workflow config: {config.route}")
+
+    def update(self, old_route: str, config: WorkflowConfig):
+        """更新已有 config，支持修改路由"""
+        # 如果路由变了，删除旧文件
+        if old_route != config.route:
+            old_safe = old_route.lstrip("/").replace("/", "-")
+            old_path = settings.workflows_dir_path / f"{old_safe}.yaml"
+            if old_path.exists():
+                old_path.unlink()
+            self._configs.pop(old_route, None)
+
+        self._write_yaml(config)
+        self._configs[config.route] = config
+        logger.info(f"Updated workflow config: {old_route} -> {config.route}")
+
+    def _write_yaml(self, config: WorkflowConfig):
+        """写入 YAML 文件"""
         wf_dir = settings.workflows_dir_path
         wf_dir.mkdir(parents=True, exist_ok=True)
-
-        # 用 route 去掉前导 / 作为文件名
         safe_name = config.route.lstrip("/").replace("/", "-") or "unnamed"
         file_path = wf_dir / f"{safe_name}.yaml"
-
-        # 转为 dict 后写入
         data = config.model_dump(mode="json", exclude_none=True)
         with open(file_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
-        self._configs[config.route] = config
-        logger.info(f"Saved workflow config: {config.route}")
+    def save_workflow_json(self, filename: str, content: dict):
+        """保存用户上传的 workflow JSON 文件"""
+        json_dir = settings.workflows_json_dir_path
+        json_dir.mkdir(parents=True, exist_ok=True)
+        import json
+        with open(json_dir / filename, "w", encoding="utf-8") as f:
+            json.dump(content, f, indent=2, ensure_ascii=False)
 
     def delete(self, route: str) -> bool:
         config = self._configs.pop(route, None)

@@ -42,7 +42,18 @@ async def configs_page(request: Request):
 
 @admin_router.get("/configs/new", response_class=HTMLResponse)
 async def new_config_page(request: Request):
-    return templates.TemplateResponse(request, "config_new.html", {"request": request})
+    return templates.TemplateResponse(request, "config_new.html", {"request": request, "edit_mode": False})
+
+
+@admin_router.get("/configs/{route:path}/edit", response_class=HTMLResponse)
+async def edit_config_page(request: Request, route: str):
+    cfg = config_manager.get("/" + route)
+    if cfg is None:
+        raise HTTPException(404, "Config not found")
+    return templates.TemplateResponse(
+        request, "config_new.html",
+        {"request": request, "edit_mode": True, "edit_config": cfg.model_dump(mode="json")},
+    )
 
 
 @admin_router.get("/servers", response_class=HTMLResponse)
@@ -87,6 +98,7 @@ async def create_config(
     route: str = Form(...),
     description: str = Form(""),
     workflow_file: str = Form(""),
+    workflow_json: str = Form(""),       # base64 编码的 workflow JSON
     timeout: int = Form(120),
     backend_servers: str = Form(""),
     output_node_id: str = Form(""),
@@ -94,8 +106,16 @@ async def create_config(
 ):
     """创建新的 workflow config"""
     import json
-    inputs_data = json.loads(inputs_json)
 
+    # 保存 workflow JSON 文件
+    if workflow_json and workflow_file:
+        try:
+            wf_data = json.loads(workflow_json)
+            config_manager.save_workflow_json(workflow_file, wf_data)
+        except Exception:
+            pass
+
+    inputs_data = json.loads(inputs_json)
     config = WorkflowConfig(
         name=name,
         route=route,
@@ -105,12 +125,49 @@ async def create_config(
         timeout=timeout,
         backend_servers=[s.strip() for s in backend_servers.split(",") if s.strip()],
         output_node_id=output_node_id,
-        inputs=[
-            WorkflowInput(**inp) for inp in inputs_data
-        ],
+        inputs=[WorkflowInput(**inp) for inp in inputs_data],
     )
     config_manager.save(config)
     return {"ok": True, "route": route}
+
+
+@admin_router.put("/api/configs/{route:path}")
+async def update_config(
+    route: str,
+    name: str = Form(...),
+    new_route: str = Form(...),
+    description: str = Form(""),
+    workflow_file: str = Form(""),
+    workflow_json: str = Form(""),
+    timeout: int = Form(120),
+    backend_servers: str = Form(""),
+    output_node_id: str = Form(""),
+    inputs_json: str = Form("[]"),
+):
+    """更新已有 workflow config"""
+    import json
+
+    if workflow_json and workflow_file:
+        try:
+            wf_data = json.loads(workflow_json)
+            config_manager.save_workflow_json(workflow_file, wf_data)
+        except Exception:
+            pass
+
+    inputs_data = json.loads(inputs_json)
+    config = WorkflowConfig(
+        name=name,
+        route=new_route,
+        method="POST",
+        description=description,
+        workflow_file=workflow_file,
+        timeout=timeout,
+        backend_servers=[s.strip() for s in backend_servers.split(",") if s.strip()],
+        output_node_id=output_node_id,
+        inputs=[WorkflowInput(**inp) for inp in inputs_data],
+    )
+    config_manager.update(route, config)
+    return {"ok": True, "route": new_route}
 
 
 @admin_router.post("/api/configs/analyze")

@@ -52,6 +52,8 @@
                     </td>
                     <td>{{ cfg.timeout }}</td>
                     <td>
+                        <a class="btn" style="padding:4px 10px;font-size:12px;margin-right:4px"
+                           href="/configs/{{ cfg.route.lstrip('/') }}/edit">编辑</a>
                         <button class="btn btn-danger" style="padding:4px 10px;font-size:12px"
                                 onclick="deleteConfig('{{ cfg.route }}')">删除</button>
                     </td>

@@ -1,74 +1,44 @@
-name: real-test
+name: New Workflow
 route: /test
 method: POST
 description: Rule-based analyzed workflow
-workflow_file: test.json
+workflow_file: test
 timeout: 120
 backend_servers:
 - server-0ef300
 - server-06ef32
 - server-2db788
+- server-319f68
 inputs:
-- name: width
-  type: integer
-  required: false
-  default: 1024
-  description: EmptyLatentImage 节点 51 的 width
-  inject_to:
-    node_id: '51'
-    field: width
-- name: height
-  type: integer
-  required: false
-  default: 1824
-  description: EmptyLatentImage 节点 51 的 height
-  inject_to:
-    node_id: '51'
-    field: height
-- name: batch_size
-  type: integer
-  required: false
-  default: 1
-  description: EmptyLatentImage 节点 51 的 batch_size
-  inject_to:
-    node_id: '51'
-    field: batch_size
-- name: text_71
+- name: text_67
   type: string
   required: false
-  description: CLIPTextEncode 节点 71 的文本输入
+  description: CLIPTextEncode 节点 67 的文本输入
   inject_to:
-    node_id: '71'
-    field: text
-- name: text_72
-  type: string
-  required: false
-  description: CLIPTextEncode 节点 72 的文本输入
-  inject_to:
-    node_id: '72'
+    node_id: '67'
     field: text
 - name: seed
   type: integer
   required: false
   default: -1
-  description: KSampler 节点 74 的 seed
+  description: KSampler 节点 69 的 seed
   inject_to:
-    node_id: '74'
+    node_id: '69'
     field: seed
 - name: steps
   type: integer
   required: false
   default: 30
-  description: KSampler 节点 74 的 steps
+  description: KSampler 节点 69 的 steps
   inject_to:
-    node_id: '74'
+    node_id: '69'
     field: steps
 - name: cfg
   type: integer
   required: false
-  default: 2.5
-  description: KSampler 节点 74 的 cfg
+  default: 4
+  description: KSampler 节点 69 的 cfg
   inject_to:
-    node_id: '74'
+    node_id: '69'
     field: cfg
-output_node_id: '342'
+output_node_id: '9'
