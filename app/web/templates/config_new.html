@@ -36,10 +36,10 @@
     </nav>
     <main>
         <h1>{{ '编辑' if edit_mode else '新建' }}工作流</h1>
-        <p class="subtitle">上传 ComfyUI workflow JSON → AI 分析 → 勾选输入项 → 保存</p>
+        <p class="subtitle">{{ '修改已有配置' if edit_mode else '上传 ComfyUI workflow JSON → AI 分析 → 勾选输入项 → 保存' }}</p>
 
-        <!-- Step 1: 上传 + 分析 -->
-        <div class="section">
+        <!-- Step 1: 上传 + 分析 (新建模式) -->
+        <div class="section" id="upload-section" {% if edit_mode %}style="display:none"{% endif %}>
             <h2>1. 上传 Workflow JSON</h2>
             <div style="display:flex;gap:12px;align-items:flex-end">
                 <div style="flex:1">
@@ -49,6 +49,20 @@
             </div>
             <div id="analyze-status" class="hint-row" style="margin-top:8px;display:none"></div>
         </div>
+
+        <!-- 编辑模式：显示当前文件 + 可选重分析 -->
+        {% if edit_mode %}
+        <div class="section" id="edit-info">
+            <h2>Workflow JSON</h2>
+            <p class="text-muted">当前文件: <code id="current-wf-file">{{ edit_config.workflow_file }}</code></p>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+                <span class="hint-row">如需重新分析，上传新 JSON：</span>
+                <input type="file" id="wf-file" accept=".json" onchange="onFileSelected()" style="font-size:12px">
+                <button class="btn" onclick="analyzeWorkflow()" style="font-size:12px">重新分析</button>
+            </div>
+            <div id="analyze-status" class="hint-row" style="margin-top:8px;display:none"></div>
+        </div>
+        {% endif %}
 
         <!-- Step 2: 配置 -->
         <div id="form-section" style="display:none">
@@ -273,6 +287,9 @@
             fd.set('backend_servers', collectServers());
             fd.set('inputs_json', JSON.stringify(selectedInputs));
             if (isEdit) fd.set('new_route', fd.get('route'));
+            // 只有重新上传了 JSON 才更新文件
+            if (wfJsonContent) fd.set('workflow_json', JSON.stringify(wfJsonContent));
+            else fd.delete('workflow_json');
 
             const url = isEdit ? '/api/configs/' + encodeURIComponent(editData.route) : '/api/configs';
             const method = isEdit ? 'PUT' : 'POST';
