@@ -45,7 +45,11 @@
                     <td><code style="color:var(--accent)">{{ cfg.route }}</code></td>
                     <td>{{ cfg.name }}</td>
                     <td><span class="badge online">{{ cfg.method }}</span></td>
-                    <td class="text-muted">{{ cfg.backend_servers | join(', ') }}</td>
+                    <td class="text-muted">
+                        {% for sid in cfg.backend_servers %}
+                        {{ server_map.get(sid, sid) }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </td>
                     <td>{{ cfg.timeout }}</td>
                     <td>
                         <button class="btn btn-danger" style="padding:4px 10px;font-size:12px"

@@ -32,9 +32,10 @@ async def admin_index(request: Request):
 @admin_router.get("/configs", response_class=HTMLResponse)
 async def configs_page(request: Request):
     configs = config_manager.list_all()
+    server_map = {s.id: s.name for s in server_manager.get_all_servers()}
     return templates.TemplateResponse(
         request, "configs.html",
-        {"request": request, "configs": configs},
+        {"request": request, "configs": configs, "server_map": server_map},
     )
 
 
@@ -149,6 +150,24 @@ async def list_servers():
 async def check_servers():
     await server_manager.check_all()
     return server_manager.get_all_status()
+
+
+@admin_router.post("/api/servers")
+async def add_server(
+    name: str = Form(...),
+    host: str = Form(...),
+    port: int = Form(8188),
+):
+    server = server_manager.add_server(name=name, host=host, port=port)
+    return {"ok": True, "server": server.model_dump()}
+
+
+@admin_router.delete("/api/servers/{server_id}")
+async def delete_server(server_id: str):
+    ok = server_manager.remove_server(server_id)
+    if not ok:
+        raise HTTPException(404, "Server not found")
+    return {"ok": True}
 
 
 @admin_router.get("/api/stats")

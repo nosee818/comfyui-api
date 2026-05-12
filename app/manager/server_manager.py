@@ -89,6 +89,42 @@ class ServerManager:
             for s in self._servers.values()
         ]
 
+    # ── CRUD ────────────────────────────────────────
+
+    def add_server(self, name: str, host: str, port: int) -> BackendServer:
+        """添加后端服务器，自动生成 ID"""
+        import uuid
+        sid = f"server-{uuid.uuid4().hex[:6]}"
+        server = BackendServer(id=sid, name=name, host=host, port=port, enabled=True)
+        self._servers[sid] = server
+        self._status[sid] = {"online": False, "queue_remaining": 0, "last_checked": None}
+        self._load_index[sid] = 0
+        self._save_to_yaml()
+        logger.info(f"Added server: {name} ({host}:{port})")
+        return server
+
+    def remove_server(self, sid: str) -> bool:
+        server = self._servers.pop(sid, None)
+        if server is None:
+            return False
+        self._status.pop(sid, None)
+        self._load_index.pop(sid, None)
+        self._save_to_yaml()
+        logger.info(f"Removed server: {server.name}")
+        return True
+
+    def _save_to_yaml(self):
+        """保存服务器列表到 YAML"""
+        path = settings.servers_config_path
+        data = {
+            "servers": [
+                {"id": s.id, "name": s.name, "host": s.host, "port": s.port, "enabled": s.enabled}
+                for s in self._servers.values()
+            ]
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
     # ── 健康检查 ────────────────────────────────────
 
     async def check_all(self) -> dict[str, dict]:
