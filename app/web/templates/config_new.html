@@ -35,11 +35,11 @@
         <a href="/docs" target="_blank">API 文档</a>
     </nav>
     <main>
-        <h1>{{ '编辑' if edit_mode else '新建' }}工作流</h1>
-        <p class="subtitle">{{ '修改已有配置' if edit_mode else '上传 ComfyUI workflow JSON → AI 分析 → 勾选输入项 → 保存' }}</p>
-
-        <!-- Step 1: 上传 + 分析 (新建模式) -->
-        <div class="section" id="upload-section" {% if edit_mode %}style="display:none"{% endif %}>
+        {% if not edit_mode %}
+        <!-- ═══════ 新建模式 ═══════ -->
+        <h1>新建工作流</h1>
+        <p class="subtitle">上传 ComfyUI workflow JSON → AI 分析 → 勾选输入项 → 保存</p>
+        <div class="section">
             <h2>1. 上传 Workflow JSON</h2>
             <div style="display:flex;gap:12px;align-items:flex-end">
                 <div style="flex:1">
@@ -49,168 +49,91 @@
             </div>
             <div id="analyze-status" class="hint-row" style="margin-top:8px;display:none"></div>
         </div>
-
-        <!-- 编辑模式：显示当前文件 + 可选重分析 -->
-        {% if edit_mode %}
-        <div class="section" id="edit-info">
-            <h2>Workflow JSON</h2>
-            <p class="text-muted">当前文件: <code id="current-wf-file">{{ edit_config.workflow_file }}</code></p>
-            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-                <span class="hint-row">如需重新分析，上传新 JSON：</span>
-                <input type="file" id="wf-file" accept=".json" onchange="onFileSelected()" style="font-size:12px">
-                <button class="btn" onclick="analyzeWorkflow()" style="font-size:12px">重新分析</button>
-            </div>
-            <div id="analyze-status" class="hint-row" style="margin-top:8px;display:none"></div>
-        </div>
-        {% endif %}
-
-        <!-- Step 2: 配置 -->
         <div id="form-section" style="display:none">
             <form id="config-form" onsubmit="submitConfig(event)">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div class="form-group">
-                        <label>API 路由</label>
-                        <input name="route" id="field-route" placeholder="/my-workflow" required>
-                        <div class="hint-row">API 调用路径，如 /z-image</div>
-                    </div>
-                    <div class="form-group">
-                        <label>名称</label>
-                        <input name="name" id="field-name" placeholder="我的工作流" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>描述</label>
-                    <textarea name="description" id="field-desc" placeholder="描述这个 API 的功能..."></textarea>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div class="form-group">
-                        <label>超时（秒）</label>
-                        <input name="timeout" id="field-timeout" type="number" value="120">
-                    </div>
-                    <div class="form-group">
-                        <label>后端服务器</label>
-                        <div id="server-checkboxes" style="padding:6px 0;">
-                            <span class="text-muted">加载中...</span>
-                        </div>
-                        <label style="cursor:pointer;font-size:12px;color:var(--accent);margin-top:4px;display:block">
-                            <input type="checkbox" onchange="toggleAllServers(this)"> 全选
-                        </label>
-                        <input type="hidden" name="backend_servers" id="backend-servers-input" value="">
-                    </div>
-                </div>
-
-                <!-- 隐藏字段 -->
-                <input type="hidden" name="workflow_file" id="field-wf-file">
-                <input type="hidden" name="workflow_json" id="field-wf-json">
-                <input type="hidden" name="output_node_id" id="field-output-node">
-                <input type="hidden" name="inputs_json" id="inputs-json" value="[]">
-                <input type="hidden" name="new_route" id="field-new-route">
-
-                <!-- 输入参数选择 -->
-                <div class="section">
-                    <h2>2. 选择 API 输入参数</h2>
-                    <p class="hint-row" style="margin-bottom:12px">勾选的项将作为 API 参数暴露给调用方，未勾选的保持 workflow 原始值</p>
-                    <div id="inputs-table"></div>
-                    <div id="no-inputs-msg" class="text-muted" style="display:none;padding:16px">未检测到可配置参数</div>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px">
-                    {{ '保存修改' if edit_mode else '保存配置' }}
-                </button>
+                {% include "config_form_fields.html" %}
             </form>
         </div>
+
+        {% else %}
+        <!-- ═══════ 编辑模式 ═══════ -->
+        <h1>编辑工作流</h1>
+        <p class="subtitle">修改 <strong>{{ edit_config.name }}</strong> 的配置</p>
+
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:8px">
+            <span class="text-muted" style="font-size:13px">Workflow JSON:</span>
+            <code>{{ edit_config.workflow_file }}</code>
+            <span style="flex:1"></span>
+            <span class="hint-row">重新分析参数：</span>
+            <input type="file" id="wf-file" accept=".json" onchange="onFileSelected()" style="font-size:12px;width:180px">
+            <button class="btn" onclick="analyzeWorkflow()" style="font-size:12px">重新分析</button>
+            <div id="analyze-status" class="hint-row" style="display:none"></div>
+        </div>
+
+        <form id="config-form" onsubmit="submitConfig(event)">
+            {% include "config_form_fields.html" %}
+        </form>
+        {% endif %}
     </main>
 
     <script>
-        // ── 状态 ──
         const isEdit = {{ 'true' if edit_mode else 'false' }};
         const editData = {{ ('JSON.parse(' + (edit_config | tojson | safe) + ')' ) if edit_mode else 'null' }};
-        let analyzedInputs = [];     // AI 分析出的所有输入
-        let selectedInputs = [];     // 用户勾选的输入
-        let wfJsonContent = null;    // 上传的 workflow JSON 内容
+        let analyzedInputs = [];
+        let selectedInputs = [];
+        let wfJsonContent = null;
         let outputNodeId = '';
 
-        // ── 文件选择 ──
+        // ── 文件选择（新建模式自动推导） ──
         function onFileSelected() {
             const f = document.getElementById('wf-file').files[0];
-            if (!f) return;
+            if (!f || isEdit) return;
             const base = f.name.replace(/\.json$/i, '');
-            // 自动推导名称和路由
-            if (!isEdit) {
-                document.getElementById('field-name').value = base;
-                document.getElementById('field-route').value = '/' + base.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
-                document.getElementById('field-wf-file').value = f.name;
-            }
+            document.getElementById('field-name').value = base;
+            document.getElementById('field-route').value = '/' + base.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
+            document.getElementById('field-wf-file').value = f.name;
         }
 
         // ── AI 分析 ──
         async function analyzeWorkflow() {
             const file = document.getElementById('wf-file').files[0];
             if (!file) return alert('请先选择 workflow JSON 文件');
-
             const status = document.getElementById('analyze-status');
-            status.textContent = 'AI 分析中...'; status.style.display = 'block';
-
-            // 读取 JSON 内容
+            status.textContent = '分析中...'; status.style.display = 'block';
             const text = await file.text();
             try { wfJsonContent = JSON.parse(text); } catch(e) { alert('JSON 解析失败'); return; }
-
-            // 上传分析
-            const fd = new FormData();
-            fd.append('workflow_file', file);
+            const fd = new FormData(); fd.append('workflow_file', file);
             const resp = await fetch('/api/configs/analyze', { method:'POST', body: fd });
             const data = await resp.json();
-
             analyzedInputs = data.inputs || [];
             outputNodeId = data.output_node_id || '';
             document.getElementById('field-output-node').value = outputNodeId;
             document.getElementById('field-wf-json').value = JSON.stringify(wfJsonContent);
-
-            // 自动填充
             if (!isEdit) {
                 const base = file.name.replace(/\.json$/i, '');
                 document.getElementById('field-name').value = document.getElementById('field-name').value || base;
                 document.getElementById('field-route').value = document.getElementById('field-route').value || '/' + base.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
                 document.getElementById('field-wf-file').value = file.name;
             }
-
-            // 渲染输入勾选表
             renderInputTable();
             document.getElementById('form-section').style.display = 'block';
-            status.textContent = '分析完成，请在下方勾选需要暴露的 API 参数'; status.style.color = 'var(--green)';
+            status.textContent = '分析完成'; status.style.color = 'var(--green)';
         }
 
-        // ── 渲染输入表格 ──
+        // ── 输入表格 ──
         function renderInputTable() {
             const container = document.getElementById('inputs-table');
             const noMsg = document.getElementById('no-inputs-msg');
-
-            if (!analyzedInputs.length) {
-                container.innerHTML = ''; noMsg.style.display = 'block'; return;
-            }
+            if (!analyzedInputs.length) { container.innerHTML = ''; noMsg.style.display = 'block'; return; }
             noMsg.style.display = 'none';
-
-            // 编辑模式：恢复已选状态
             let checkedSet = new Set();
-            if (isEdit && editData) {
-                (editData.inputs || []).forEach(inp => checkedSet.add(inp.name));
-            }
-
-            let html = '<div class="input-header">' +
-                '<span style="width:40px">启用</span>' +
-                '<span style="flex:1">参数名</span>' +
-                '<span style="width:60px">类型</span>' +
-                '<span style="width:100px">注入节点</span>' +
-                '<span style="width:80px">注入字段</span>' +
-                '<span style="width:80px">默认值</span>' +
-                '<span style="width:50px">必填</span>' +
-                '</div>';
-
+            if (isEdit && editData) { (editData.inputs || []).forEach(inp => checkedSet.add(inp.name)); }
+            let html = '<div class="input-header"><span style="width:40px">启用</span><span style="flex:1">参数名</span><span style="width:60px">类型</span><span style="width:100px">注入节点</span><span style="width:80px">字段</span><span style="width:80px">默认值</span><span style="width:50px">必填</span></div>';
             analyzedInputs.forEach((inp, i) => {
                 const inject = inp.inject_to || {};
-                const isChecked = checkedSet.has(inp.name) || (!isEdit && inp.required);
+                const checked = checkedSet.has(inp.name) || (!isEdit && inp.required);
                 html += '<div class="input-row">' +
-                    '<input type="checkbox" onchange="onInputToggle()" style="width:40px;accent-color:var(--accent)" ' + (isChecked?'checked':'') + ' data-idx="' + i + '">' +
+                    '<input type="checkbox" onchange="onInputToggle()" style="width:40px;accent-color:var(--accent)" ' + (checked?'checked':'') + ' data-idx="' + i + '">' +
                     '<input type="text" value="' + (inp.name||'') + '" data-idx="' + i + '" data-field="name" style="flex:1" onchange="onInputChange(' + i + ',this)">' +
                     '<span class="tag" style="width:60px;text-align:center">' + (inp.type||'string') + '</span>' +
                     '<span style="width:100px;font-size:11px;color:var(--muted)">' + (inject.node_id||'-') + '</span>' +
@@ -219,49 +142,35 @@
                     '<input type="checkbox" ' + (inp.required?'checked':'') + ' data-idx="' + i + '" data-field="required" style="width:50px;accent-color:var(--accent)" onchange="onInputChange(' + i + ',this)">' +
                     '</div>';
             });
-
             container.innerHTML = html;
             updateSelectedInputs();
         }
-
-        // ── 输入变更 ──
         function onInputToggle() { updateSelectedInputs(); }
-
         function onInputChange(idx, el) {
-            const field = el.dataset.field;
-            const val = el.type === 'checkbox' ? el.checked : el.value;
+            const field = el.dataset.field, val = el.type === 'checkbox' ? el.checked : el.value;
             if (field === 'name') analyzedInputs[idx].name = val;
             else if (field === 'default') analyzedInputs[idx].default = val;
             else if (field === 'required') analyzedInputs[idx].required = val;
             updateSelectedInputs();
         }
-
         function updateSelectedInputs() {
             selectedInputs = [];
             document.querySelectorAll('#inputs-table input[type=checkbox][data-idx]').forEach(cb => {
-                if (cb.checked) {
-                    const idx = parseInt(cb.dataset.idx);
-                    selectedInputs.push(analyzedInputs[idx]);
-                }
+                if (cb.checked) selectedInputs.push(analyzedInputs[parseInt(cb.dataset.idx)]);
             });
             document.getElementById('inputs-json').value = JSON.stringify(selectedInputs);
         }
 
-        // ── 服务器全选 ──
+        // ── 服务器 ──
         function toggleAllServers(el) {
             document.querySelectorAll('input[name="server_check"]').forEach(cb => cb.checked = el.checked);
         }
-
-        // ── 加载服务器 ──
         async function loadServers() {
             const container = document.getElementById('server-checkboxes');
             try {
                 const resp = await fetch('/api/servers');
                 const servers = await resp.json();
-                if (!servers.length) {
-                    container.innerHTML = '<span class="text-muted">暂无服务器，<a href="/servers">去添加</a></span>';
-                    return;
-                }
+                if (!servers.length) { container.innerHTML = '<span class="text-muted">暂无服务器，<a href="/servers">去添加</a></span>'; return; }
                 const editServers = isEdit && editData ? new Set(editData.backend_servers || []) : null;
                 container.innerHTML = servers.map(s => {
                     const checked = editServers ? editServers.has(s.server_id) : false;
@@ -273,10 +182,8 @@
                 }).join('');
             } catch(e) { container.innerHTML = '<span class="text-muted">加载失败</span>'; }
         }
-
         function collectServers() {
-            const checks = document.querySelectorAll('input[name="server_check"]:checked');
-            return Array.from(checks).map(c => c.value).join(',');
+            return Array.from(document.querySelectorAll('input[name="server_check"]:checked')).map(c => c.value).join(',');
         }
 
         // ── 保存 ──
@@ -287,20 +194,13 @@
             fd.set('backend_servers', collectServers());
             fd.set('inputs_json', JSON.stringify(selectedInputs));
             if (isEdit) fd.set('new_route', fd.get('route'));
-            // 只有重新上传了 JSON 才更新文件
             if (wfJsonContent) fd.set('workflow_json', JSON.stringify(wfJsonContent));
             else fd.delete('workflow_json');
-
             const url = isEdit ? '/api/configs/' + encodeURIComponent(editData.route) : '/api/configs';
             const method = isEdit ? 'PUT' : 'POST';
             const resp = await fetch(url, { method, body: fd });
-            if (resp.ok) {
-                alert(isEdit ? '修改已保存' : '配置已创建');
-                window.location.href = '/configs';
-            } else {
-                const err = await resp.json();
-                alert('保存失败: ' + (err.detail || JSON.stringify(err)));
-            }
+            if (resp.ok) { alert(isEdit ? '已保存' : '已创建'); window.location.href = '/configs'; }
+            else { const err = await resp.json(); alert('保存失败: ' + (err.detail || JSON.stringify(err))); }
         }
 
         // ── 编辑模式初始化 ──
@@ -312,14 +212,12 @@
             document.getElementById('field-wf-file').value = editData.workflow_file || '';
             document.getElementById('field-timeout').value = editData.timeout || 120;
             document.getElementById('field-output-node').value = editData.output_node_id || '';
-            // 编辑模式的 inputs 作为 analyzedInputs
             analyzedInputs = (editData.inputs || []).map(inp => ({
                 name: inp.name, type: inp.type, required: inp.required,
                 default: inp.default, description: inp.description || '',
                 inject_to: inp.inject_to || {}
             }));
             outputNodeId = editData.output_node_id || '';
-            document.getElementById('form-section').style.display = 'block';
             renderInputTable();
         }
 

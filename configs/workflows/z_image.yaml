@@ -1,16 +1,20 @@
-name: New Workflow
-route: /test
+name: Z-IMAGE
+route: /z_image
 method: POST
-description: Rule-based analyzed workflow
-workflow_file: test
+description: Z-IMAGE
+workflow_file: image_z_image01.json
 timeout: 120
 backend_servers:
 - server-0ef300
+- server-c06639
 - server-06ef32
+- server-838e44
 - server-2db788
+- server-27283f
 - server-319f68
+- server-c7cfd6
 inputs:
-- name: text_67
+- name: prompt
   type: string
   required: false
   description: CLIPTextEncode 节点 67 的文本输入

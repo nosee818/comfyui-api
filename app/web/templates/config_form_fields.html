@@ -1,0 +1,48 @@
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group">
+        <label>API 路由</label>
+        <input name="route" id="field-route" placeholder="/my-workflow" required>
+        <div class="hint-row">API 调用路径，如 /z-image</div>
+    </div>
+    <div class="form-group">
+        <label>名称</label>
+        <input name="name" id="field-name" placeholder="我的工作流" required>
+    </div>
+</div>
+<div class="form-group">
+    <label>描述</label>
+    <textarea name="description" id="field-desc" placeholder="描述这个 API 的功能..."></textarea>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group">
+        <label>超时（秒）</label>
+        <input name="timeout" id="field-timeout" type="number" value="120">
+    </div>
+    <div class="form-group">
+        <label>后端服务器</label>
+        <div id="server-checkboxes" style="padding:6px 0;">
+            <span class="text-muted">加载中...</span>
+        </div>
+        <label style="cursor:pointer;font-size:12px;color:var(--accent);margin-top:4px;display:block">
+            <input type="checkbox" onchange="toggleAllServers(this)"> 全选
+        </label>
+        <input type="hidden" name="backend_servers" id="backend-servers-input" value="">
+    </div>
+</div>
+
+<input type="hidden" name="workflow_file" id="field-wf-file">
+<input type="hidden" name="workflow_json" id="field-wf-json">
+<input type="hidden" name="output_node_id" id="field-output-node">
+<input type="hidden" name="inputs_json" id="inputs-json" value="[]">
+<input type="hidden" name="new_route" id="field-new-route">
+
+<div class="section">
+    <h2>API 输入参数</h2>
+    <p class="hint-row" style="margin-bottom:12px">勾选的项将作为 API 参数暴露，未勾选的保持 workflow 原始值</p>
+    <div id="inputs-table"></div>
+    <div id="no-inputs-msg" class="text-muted" style="display:none;padding:16px">未检测到可配置参数</div>
+</div>
+
+<button type="submit" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px">
+    {{ '保存修改' if edit_mode else '保存配置' }}
+</button>

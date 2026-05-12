@@ -45,7 +45,7 @@ async def new_config_page(request: Request):
     return templates.TemplateResponse(request, "config_new.html", {"request": request, "edit_mode": False})
 
 
-@admin_router.get("/configs/{route:path}/edit", response_class=HTMLResponse)
+@admin_router.get("/configs/edit/{route:path}", response_class=HTMLResponse)
 async def edit_config_page(request: Request, route: str):
     cfg = config_manager.get("/" + route)
     if cfg is None:
@@ -56,36 +56,7 @@ async def edit_config_page(request: Request, route: str):
     )
 
 
-@admin_router.get("/servers", response_class=HTMLResponse)
-async def servers_page(request: Request):
-    servers = server_manager.get_all_servers()
-    status_list = server_manager.get_all_status()
-    return templates.TemplateResponse(
-        request, "servers.html",
-        {"request": request, "servers": servers, "status_list": status_list},
-    )
-
-
-@admin_router.get("/stats", response_class=HTMLResponse)
-async def stats_page(request: Request):
-    all_stats = await stats_manager.get_all_stats()
-    recent = await stats_manager.get_recent_tasks(100)
-    return templates.TemplateResponse(
-        request, "stats.html",
-        {"request": request, "stats": all_stats, "recent": recent},
-    )
-
-
-@admin_router.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request):
-    llm = settings_manager.get_llm_config()
-    return templates.TemplateResponse(
-        request, "settings.html",
-        {"request": request, "llm": llm.to_dict()},
-    )
-
-
-@admin_router.get("/configs/{route:path}/api", response_class=HTMLResponse)
+@admin_router.get("/configs/api/{route:path}", response_class=HTMLResponse)
 async def api_detail_page(request: Request, route: str):
     cfg = config_manager.get("/" + route)
     if cfg is None:

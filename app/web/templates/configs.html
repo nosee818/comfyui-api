@@ -55,9 +55,9 @@
                         <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:2px"
                                 onclick="copyApiUrl('{{ cfg.route }}')" title="复制 API 地址">复制 URL</button>
                         <a class="btn" style="padding:3px 8px;font-size:11px;margin-right:2px"
-                           href="/configs/{{ cfg.route.lstrip('/') }}/api">详情</a>
+                           href="/configs/api/{{ cfg.route.lstrip('/') }}">详情</a>
                         <a class="btn" style="padding:3px 8px;font-size:11px;margin-right:2px"
-                           href="/configs/{{ cfg.route.lstrip('/') }}/edit">编辑</a>
+                           href="/configs/edit/{{ cfg.route.lstrip('/') }}">编辑</a>
                         <button class="btn btn-danger" style="padding:3px 8px;font-size:11px"
                                 onclick="deleteConfig('{{ cfg.route }}')">删除</button>
                     </td>
