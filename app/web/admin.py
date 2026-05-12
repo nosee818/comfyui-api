@@ -85,6 +85,23 @@ async def settings_page(request: Request):
     )
 
 
+@admin_router.get("/configs/{route:path}/api", response_class=HTMLResponse)
+async def api_detail_page(request: Request, route: str):
+    cfg = config_manager.get("/" + route)
+    if cfg is None:
+        raise HTTPException(404, "Config not found")
+    host = request.headers.get("host", "localhost")
+    return templates.TemplateResponse(
+        request, "config_api.html",
+        {
+            "request": request,
+            "config": cfg,
+            "host": host,
+            "api_url": f"http://{host}{cfg.route}",
+        },
+    )
+
+
 # ── API 路由 ────────────────────────────────────────
 
 @admin_router.get("/api/configs")

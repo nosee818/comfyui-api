@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 详情 - {{ config.name }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .api-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .api-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .method-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; background: rgba(63,185,80,0.15); color: var(--green); }
+        .code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-family: "SFMono-Regular",Consolas,monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+        .param-grid { display: grid; grid-template-columns: auto 80px 60px auto; gap: 6px 16px; align-items: center; }
+        .param-header { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 0; }
+        .param-row { font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .copy-btn { padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.15s; }
+        .copy-btn:hover { background: rgba(88,166,255,0.1); }
+        .copy-btn.copied { background: rgba(63,185,80,0.15); border-color: var(--green); color: var(--green); }
+    </style>
+</head>
+<body>
+    <nav>
+        <span class="brand">ComfyUI Gateway</span>
+        <a href="/">概览</a>
+        <a href="/configs" class="active">工作流</a>
+        <a href="/servers">服务器</a>
+        <a href="/stats">统计</a>
+        <a href="/settings">设置</a>
+        <a href="/docs" target="_blank">API 文档</a>
+    </nav>
+    <main>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+            <div>
+                <h1>{{ config.name }}</h1>
+                <p class="subtitle">{{ config.description or 'API 详细说明' }}</p>
+            </div>
+            <span class="method-badge" style="font-size:14px;padding:4px 12px">{{ config.method }}</span>
+        </div>
+
+        <!-- URL -->
+        <div class="api-card">
+            <h3>API 地址</h3>
+            <div style="display:flex;align-items:center;gap:8px">
+                <code class="code-block" style="flex:1" id="api-url">{{ api_url }}</code>
+                <button class="copy-btn" onclick="copyUrl()" id="copy-btn">复制</button>
+            </div>
+        </div>
+
+        <!-- 参数 -->
+        <div class="api-card">
+            <h3>请求参数 (multipart/form-data)</h3>
+            {% if config.inputs %}
+            <div class="param-grid">
+                <div class="param-header">参数名</div>
+                <div class="param-header">类型</div>
+                <div class="param-header">必填</div>
+                <div class="param-header">说明</div>
+                {% for inp in config.inputs %}
+                <div class="param-row" style="font-weight:600;color:var(--accent)">{{ inp.name }}</div>
+                <div class="param-row"><span class="tag" style="text-align:center;display:block">{{ inp.type.value }}</span></div>
+                <div class="param-row">{{ '是' if inp.required else '否' }}</div>
+                <div class="param-row text-muted">{{ inp.description }} {% if inp.default is not none and inp.default != '' %}(默认: {{ inp.default }}){% endif %}</div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">无参数</p>
+            {% endif %}
+        </div>
+
+        <!-- curl 示例 -->
+        <div class="api-card">
+            <h3>curl 示例</h3>
+            <div class="code-block" id="curl-example">curl -X {{ config.method }} {{ api_url }} \
+{% for inp in config.inputs %}{% if inp.type.value == 'image_sequence' %}  -F "{{ inp.name }}=@image.png" \
+{% else %}  -F "{{ inp.name }}={% if inp.default is not none and inp.default != '' %}{{ inp.default }}{% else %}value{% endif %}" \
+{% endif %}{% endfor %}</div>
+            <button class="copy-btn" style="margin-top:8px" onclick="copyCurl()">复制 curl 命令</button>
+        </div>
+
+        <!-- 响应 -->
+        <div class="api-card">
+            <h3>响应格式</h3>
+            <div class="code-block">{
+  "task_id": "uuid",
+  "status": "pending",
+  "message": "Task submitted"
+}</div>
+        </div>
+
+        <div class="api-card">
+            <h3>查询任务</h3>
+            <div class="code-block">GET {{ api_url.replace(config.route, '') }}/task/{task_id}
+
+{
+  "task_id": "uuid",
+  "status": "completed",     // pending | running | completed | failed
+  "progress": 100,
+  "outputs": [
+    {
+      "filename": "xxx.png",
+      "url": "http://..."
+    }
+  ]
+}</div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+            <a href="/configs" class="btn">返回列表</a>
+            <a href="/configs/{{ config.route.lstrip('/') }}/edit" class="btn">编辑</a>
+        </div>
+    </main>
+    <script>
+        function copyUrl() {
+            const el = document.getElementById('api-url');
+            navigator.clipboard.writeText(el.textContent).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '已复制'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1500);
+            });
+        }
+        function copyCurl() {
+            const text = document.getElementById('curl-example').textContent;
+            navigator.clipboard.writeText(text).then(() => alert('curl 命令已复制'));
+        }
+    </script>
+</body>
+</html>
