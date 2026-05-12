@@ -20,32 +20,25 @@ from app.web.admin import admin_router
 
 logger = get_logger(__name__)
 
+# 预加载配置和路由（必须在 FastAPI app 创建前，否则 OpenAPI 文档不显示）
+setup_logging()
+server_manager.load_servers()
+config_manager.load_all()
+register_all_workflows(dynamic_router)
+
+logger.info("=" * 50)
+logger.info(f"ComfyUI API Gateway starting on {settings.gateway_host}:{settings.gateway_port}")
+logger.info("Gateway ready. Workflow routes registered.")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期：启动时加载配置，关闭时清理资源"""
-    setup_logging()
-    logger.info("=" * 50)
-    logger.info(f"ComfyUI API Gateway starting on {settings.gateway_host}:{settings.gateway_port}")
-
-    # 加载服务器配置
-    server_manager.load_servers()
-
-    # 加载 workflow 配置
-    config_manager.load_all()
-
-    # 注册动态路由
-    register_all_workflows(dynamic_router)
-
-    # 后台任务
+    """应用生命周期：后台任务管理"""
     health_task = asyncio.create_task(server_manager.health_check_loop())
     cleanup_task = asyncio.create_task(gateway.cleanup_old_tasks())
 
-    logger.info("Gateway ready. Workflow routes registered.")
-
     yield
 
-    # 关闭
     logger.info("Shutting down...")
     health_task.cancel()
     cleanup_task.cancel()

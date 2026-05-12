@@ -25,21 +25,21 @@ templates = Jinja2Templates(directory=str(_tpl_dir))
 
 @admin_router.get("/", response_class=HTMLResponse)
 async def admin_index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html", {"request": request})
 
 
 @admin_router.get("/configs", response_class=HTMLResponse)
 async def configs_page(request: Request):
     configs = config_manager.list_all()
     return templates.TemplateResponse(
-        "configs.html",
+        request, "configs.html",
         {"request": request, "configs": configs},
     )
 
 
 @admin_router.get("/configs/new", response_class=HTMLResponse)
 async def new_config_page(request: Request):
-    return templates.TemplateResponse("config_new.html", {"request": request})
+    return templates.TemplateResponse(request, "config_new.html", {"request": request})
 
 
 @admin_router.get("/servers", response_class=HTMLResponse)
@@ -47,7 +47,7 @@ async def servers_page(request: Request):
     servers = server_manager.get_all_servers()
     status_list = server_manager.get_all_status()
     return templates.TemplateResponse(
-        "servers.html",
+        request, "servers.html",
         {"request": request, "servers": servers, "status_list": status_list},
     )
 
@@ -57,7 +57,7 @@ async def stats_page(request: Request):
     all_stats = await stats_manager.get_all_stats()
     recent = await stats_manager.get_recent_tasks(100)
     return templates.TemplateResponse(
-        "stats.html",
+        request, "stats.html",
         {"request": request, "stats": all_stats, "recent": recent},
     )
 
