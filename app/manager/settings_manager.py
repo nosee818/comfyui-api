@@ -93,7 +93,7 @@ class SettingsManager:
         llm = self._llm_config
         api_key = llm.get_api_key()
 
-        if llm.provider in ("openai", "custom") and not api_key:
+        if llm.provider == "openai" and not api_key:
             return {"ok": False, "message": "API Key 未配置"}
 
         headers = {"Content-Type": "application/json"}
