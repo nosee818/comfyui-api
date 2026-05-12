@@ -1,0 +1,46 @@
+# Z-Image 文生图 workflow
+name: "Z-Image 文生图"
+route: "/z-image"
+method: POST
+description: "文本生成图片，支持自定义分辨率"
+workflow_file: "z-image.json"
+timeout: 120
+
+backend_servers:
+  - "server-1"
+  - "server-2"
+
+inputs:
+  - name: text
+    type: string
+    required: true
+    description: "图片描述文本"
+    inject_to:
+      node_id: "6"
+      field: "text"
+
+  - name: width
+    type: integer
+    required: false
+    default: 1080
+    description: "图片宽度"
+    inject_to:
+      node_id: "5"
+      field: "width"
+
+  - name: height
+    type: integer
+    required: false
+    default: 1920
+    description: "图片高度"
+    inject_to:
+      node_id: "5"
+      field: "height"
+
+  - name: seed
+    type: integer
+    required: false
+    default: -1
+    description: "随机种子，-1 表示随机"
+
+output_node_id: "9"

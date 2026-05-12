@@ -1,0 +1,59 @@
+# Qwen Image Edit 图生图 workflow
+name: "Qwen Image Edit 图生图"
+route: "/qwen-edit"
+method: POST
+description: "图片编辑/修改，支持1-3张参考图"
+workflow_file: "qwen-edit.json"
+timeout: 180
+
+backend_servers:
+  - "server-1"
+
+inputs:
+  - name: text
+    type: string
+    required: true
+    description: "编辑要求描述"
+    inject_to:
+      node_id: "12"
+      field: "text"
+
+  - name: images
+    type: image_sequence
+    required: true
+    min_items: 1
+    max_items: 3
+    description: "输入图片（1-3张）"
+    inject_to:
+      type: image_sequence
+      nodes:
+        - "14"
+        - "15"
+        - "16"
+      field: "image"
+
+  - name: width
+    type: integer
+    required: false
+    default: 1080
+    description: "输出宽度"
+    inject_to:
+      node_id: "8"
+      field: "width"
+
+  - name: height
+    type: integer
+    required: false
+    default: 1920
+    description: "输出高度"
+    inject_to:
+      node_id: "8"
+      field: "height"
+
+  - name: seed
+    type: integer
+    required: false
+    default: -1
+    description: "随机种子"
+
+output_node_id: "20"

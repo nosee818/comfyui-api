@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器状态 - ComfyUI Gateway</title>
+    <link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+    <nav>
+        <span class="brand">ComfyUI Gateway</span>
+        <a href="/admin/">概览</a>
+        <a href="/admin/configs">工作流</a>
+        <a href="/admin/servers" class="active">服务器</a>
+        <a href="/admin/stats">统计</a>
+    </nav>
+    <main>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+                <h1>服务器状态</h1>
+                <p class="subtitle">后端 ComfyUI 服务器健康检查</p>
+            </div>
+            <button class="btn btn-primary" onclick="checkServers()">立即检查</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>服务器</th>
+                    <th>地址</th>
+                    <th>状态</th>
+                    <th>队列剩余</th>
+                    <th>最后检查</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in status_list %}
+                <tr>
+                    <td>{{ s.name }}</td>
+                    <td><code>{{ s.host }}:{{ s.port }}</code></td>
+                    <td>
+                        {% if s.online %}
+                        <span class="badge online">在线</span>
+                        {% else %}
+                        <span class="badge offline">离线</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ s.queue_remaining }}</td>
+                    <td class="text-muted">{{ s.last_checked or '未检查' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not status_list %}
+                <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">暂无服务器配置</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </main>
+    <script>
+        async function checkServers() {
+            const resp = await fetch('/admin/api/servers/check', { method:'POST' });
+            location.reload();
+        }
+    </script>
+</body>
+</html>

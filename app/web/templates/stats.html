@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计 - ComfyUI Gateway</title>
+    <link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+    <nav>
+        <span class="brand">ComfyUI Gateway</span>
+        <a href="/admin/">概览</a>
+        <a href="/admin/configs">工作流</a>
+        <a href="/admin/servers">服务器</a>
+        <a href="/admin/stats" class="active">统计</a>
+    </nav>
+    <main>
+        <h1>统计报表</h1>
+        <p class="subtitle">API 调用统计与最近任务</p>
+
+        <div class="cards" style="margin-bottom:32px">
+            {% for s in stats %}
+            <div class="card">
+                <h3>{{ s.workflow_route }}</h3>
+                <div class="value blue">{{ s.total_calls }}</div>
+                <div style="display:flex;gap:16px;margin-top:12px">
+                    <div><span style="color:var(--green)">{{ s.success_count }}</span> 成功</div>
+                    <div><span style="color:var(--red)">{{ s.fail_count }}</span> 失败</div>
+                </div>
+                <div class="text-muted" style="margin-top:8px">
+                    平均耗时: {{ s.avg_duration_ms }}ms
+                    {% if s.last_called %}
+                    <br>最近调用: {{ s.last_called }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% if not stats %}
+            <div class="card"><p class="text-muted">暂无统计数据</p></div>
+            {% endif %}
+        </div>
+
+        <h2 style="font-size:18px;margin-bottom:16px">最近任务</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>任务 ID</th>
+                    <th>路由</th>
+                    <th>状态</th>
+                    <th>后端</th>
+                    <th>耗时(ms)</th>
+                    <th>创建时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in recent %}
+                <tr>
+                    <td><code style="font-size:11px">{{ t.task_id[:8] }}...</code></td>
+                    <td>{{ t.workflow_route }}</td>
+                    <td>
+                        {% if t.status == 'completed' %}
+                        <span class="badge online">成功</span>
+                        {% elif t.status == 'failed' %}
+                        <span class="badge offline">{{ t.error[:30] if t.error else '失败' }}</span>
+                        {% else %}
+                        <span class="badge" style="background:rgba(210,153,29,0.15);color:var(--yellow)">{{ t.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ t.backend_server }}</td>
+                    <td>{{ t.duration_ms }}</td>
+                    <td class="text-muted">{{ t.created_at }}</td>
+                </tr>
+                {% endfor %}
+                {% if not recent %}
+                <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted)">暂无任务记录</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>
