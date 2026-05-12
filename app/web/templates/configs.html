@@ -83,7 +83,26 @@
         }
         function copyApiUrl(route) {
             const url = window.location.protocol + '//' + window.location.host + route;
-            navigator.clipboard.writeText(url).then(() => alert('已复制: ' + url));
+            // 尝试 Clipboard API（需要 HTTPS/localhost）
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(function() {
+                    alert('已复制: ' + url);
+                }).catch(function() {
+                    fallbackCopy(url);
+                });
+            } else {
+                fallbackCopy(url);
+            }
+        }
+        function fallbackCopy(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); alert('已复制: ' + text); }
+            catch(e) { prompt('请手动复制:', text); }
+            document.body.removeChild(ta);
         }
     </script>
 </body>

@@ -110,17 +110,32 @@
         </div>
     </main>
     <script>
+        function doCopy(text, onSuccess) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(onSuccess).catch(function(){ fallbackCopy(text, onSuccess); });
+            } else {
+                fallbackCopy(text, onSuccess);
+            }
+        }
+        function fallbackCopy(text, onSuccess) {
+            var ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); if (onSuccess) onSuccess(); }
+            catch(e) { prompt('请手动复制:', text); }
+            document.body.removeChild(ta);
+        }
         function copyUrl() {
-            const el = document.getElementById('api-url');
-            navigator.clipboard.writeText(el.textContent).then(() => {
+            const text = document.getElementById('api-url').textContent;
+            doCopy(text, function() {
                 const btn = document.getElementById('copy-btn');
                 btn.textContent = '已复制'; btn.classList.add('copied');
-                setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1500);
+                setTimeout(function() { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1500);
             });
         }
         function copyCurl() {
             const text = document.getElementById('curl-example').textContent;
-            navigator.clipboard.writeText(text).then(() => alert('curl 命令已复制'));
+            doCopy(text, function() { alert('curl 命令已复制'); });
         }
     </script>
 </body>
