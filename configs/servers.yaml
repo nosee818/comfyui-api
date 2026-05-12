@@ -1,11 +1,41 @@
 servers:
-- id: server-38bff4
-  name: 192-01
+- id: server-0ef300
+  name: ComfyUI-8188
   host: 10.192.6.192
   port: 8188
   enabled: true
-- id: server-80fb6f
-  name: 192-02
+- id: server-c06639
+  name: ComfyUI-8189
   host: 10.192.6.192
   port: 8189
+  enabled: true
+- id: server-06ef32
+  name: ComfyUI-8190
+  host: 10.192.6.192
+  port: 8190
+  enabled: true
+- id: server-838e44
+  name: ComfyUI-8191
+  host: 10.192.6.192
+  port: 8191
+  enabled: true
+- id: server-2db788
+  name: ComfyUI-8188
+  host: 10.192.6.191
+  port: 8188
+  enabled: true
+- id: server-27283f
+  name: ComfyUI-8189
+  host: 10.192.6.191
+  port: 8189
+  enabled: true
+- id: server-319f68
+  name: ComfyUI-8190
+  host: 10.192.6.191
+  port: 8190
+  enabled: true
+- id: server-c7cfd6
+  name: ComfyUI-8191
+  host: 10.192.6.191
+  port: 8191
   enabled: true

@@ -85,7 +85,7 @@ class ConfigManager:
         file_path = wf_dir / f"{safe_name}.yaml"
 
         # 转为 dict 后写入
-        data = config.model_dump(exclude_none=True, exclude_defaults=False)
+        data = config.model_dump(mode="json", exclude_none=True)
         with open(file_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
