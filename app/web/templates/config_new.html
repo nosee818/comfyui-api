@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>新建工作流 - ComfyUI Gateway</title>
-    <link rel="stylesheet" href="/admin/static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
@@ -23,10 +23,11 @@
 <body>
     <nav>
         <span class="brand">ComfyUI Gateway</span>
-        <a href="/admin/">概览</a>
-        <a href="/admin/configs" class="active">工作流</a>
-        <a href="/admin/servers">服务器</a>
-        <a href="/admin/stats">统计</a>
+        <a href="/">概览</a>
+        <a href="/configs" class="active">工作流</a>
+        <a href="/servers">服务器</a>
+        <a href="/stats">统计</a>
+        <a href="/settings">设置</a>
         <a href="/docs" target="_blank">API 文档</a>
     </nav>
     <main>
@@ -104,7 +105,7 @@
             const formData = new FormData();
             formData.append('workflow_file', file);
 
-            const resp = await fetch('/admin/api/configs/analyze', {
+            const resp = await fetch('/api/configs/analyze', {
                 method: 'POST', body: formData
             });
             analyzedConfig = await resp.json();
@@ -136,13 +137,13 @@
             e.preventDefault();
             const form = document.getElementById('config-form');
             const formData = new FormData(form);
-            const resp = await fetch('/admin/api/configs', {
+            const resp = await fetch('/api/configs', {
                 method: 'POST', body: formData
             });
             if (resp.ok) {
                 const data = await resp.json();
                 alert('配置已保存！路由: ' + data.route);
-                window.location.href = '/admin/configs';
+                window.location.href = '/configs';
             } else {
                 const err = await resp.json();
                 alert('保存失败: ' + (err.detail || JSON.stringify(err)));

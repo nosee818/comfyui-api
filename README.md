@@ -45,7 +45,6 @@
 ### 环境要求
 
 - Python 3.10+
-- 至少一个已运行的 [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 实例
 
 ### 安装
 
@@ -160,7 +159,7 @@ python run.py
 ```
 
 启动后访问：
-- 管理面板：`http://localhost:8288/admin/`
+- 管理面板：`http://localhost:8288/`
 - API 文档：`http://localhost:8288/docs`
 
 ## 管理面板
@@ -222,15 +221,15 @@ GET /task/{task_id}
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/admin/api/reload` | 热重载所有 config |
-| GET | `/admin/api/configs` | 列出所有 config |
-| POST | `/admin/api/configs` | 创建 config |
-| POST | `/admin/api/configs/analyze` | AI 分析 workflow JSON |
-| DELETE | `/admin/api/configs/{route}` | 删除 config |
-| GET | `/admin/api/servers` | 服务器状态列表 |
-| POST | `/admin/api/servers/check` | 触发健康检查 |
-| GET | `/admin/api/stats` | 统计报表 |
-| GET | `/admin/api/tasks/recent` | 最近任务 |
+| POST | `/api/reload` | 热重载所有 config |
+| GET | `/api/configs` | 列出所有 config |
+| POST | `/api/configs` | 创建 config |
+| POST | `/api/configs/analyze` | AI 分析 workflow JSON |
+| DELETE | `/api/configs/{route}` | 删除 config |
+| GET | `/api/servers` | 服务器状态列表 |
+| POST | `/api/servers/check` | 触发健康检查 |
+| GET | `/api/stats` | 统计报表 |
+| GET | `/api/tasks/recent` | 最近任务 |
 
 ### 健康检查
 

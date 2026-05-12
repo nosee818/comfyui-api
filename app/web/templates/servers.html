@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器状态 - ComfyUI Gateway</title>
-    <link rel="stylesheet" href="/admin/static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <nav>
         <span class="brand">ComfyUI Gateway</span>
-        <a href="/admin/">概览</a>
-        <a href="/admin/configs">工作流</a>
-        <a href="/admin/servers" class="active">服务器</a>
-        <a href="/admin/stats">统计</a>
+        <a href="/">概览</a>
+        <a href="/configs">工作流</a>
+        <a href="/servers" class="active">服务器</a>
+        <a href="/stats">统计</a>
+        <a href="/settings">设置</a>
         <a href="/docs" target="_blank">API 文档</a>
     </nav>
     <main>
@@ -57,7 +58,7 @@
     </main>
     <script>
         async function checkServers() {
-            const resp = await fetch('/admin/api/servers/check', { method:'POST' });
+            const resp = await fetch('/api/servers/check', { method:'POST' });
             location.reload();
         }
     </script>

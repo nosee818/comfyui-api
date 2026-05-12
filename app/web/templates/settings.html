@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置 - ComfyUI Gateway</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-size: 14px; font-family: inherit;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+        .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .result-box { margin-top: 12px; padding: 12px; border-radius: 6px; font-size: 13px; display: none; }
+        .result-box.success { background: rgba(63,185,80,0.1); border: 1px solid var(--green); color: var(--green); display: block; }
+        .result-box.error { background: rgba(248,81,73,0.1); border: 1px solid var(--red); color: var(--red); display: block; }
+        .max-w-600 { max-width: 600px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <span class="brand">ComfyUI Gateway</span>
+        <a href="/">概览</a>
+        <a href="/configs">工作流</a>
+        <a href="/servers">服务器</a>
+        <a href="/stats">统计</a>
+        <a href="/settings" class="active">设置</a>
+        <a href="/docs" target="_blank">API 文档</a>
+    </nav>
+    <main>
+        <h1>LLM 配置</h1>
+        <p class="subtitle">配置 AI 模型用于自动分析 Workflow JSON</p>
+
+        <div class="max-w-600">
+            <form id="llm-form" onsubmit="saveSettings(event)">
+                <div class="form-group">
+                    <label>服务商</label>
+                    <select name="provider" id="provider">
+                        <option value="openai" {% if llm.provider == 'openai' %}selected{% endif %}>OpenAI</option>
+                        <option value="ollama" {% if llm.provider == 'ollama' %}selected{% endif %}>Ollama (本地)</option>
+                        <option value="custom" {% if llm.provider == 'custom' %}selected{% endif %}>自定义 (OpenAI 兼容)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>API 地址</label>
+                    <input name="api_base" value="{{ llm.api_base }}" placeholder="https://api.openai.com/v1">
+                    <div class="form-hint">OpenAI 兼容的 API 地址。Ollama 默认 http://localhost:11434/v1</div>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input name="api_key" value="{{ llm.api_key }}" placeholder="sk-... (Ollama 可留空)">
+                    <div class="form-hint">留空则从环境变量 OPENAI_API_KEY 读取</div>
+                </div>
+                <div class="form-group">
+                    <label>模型名称</label>
+                    <input name="model" value="{{ llm.model }}" placeholder="gpt-4o-mini">
+                    <div class="form-hint">Ollama 示例：qwen2.5:7b、llama3.1:8b</div>
+                </div>
+                <div style="display:flex;gap:12px">
+                    <button type="submit" class="btn btn-primary">保存设置</button>
+                    <button type="button" class="btn" onclick="testLLM()">测试连接</button>
+                </div>
+            </form>
+            <div id="result" class="result-box"></div>
+        </div>
+    </main>
+    <script>
+        async function saveSettings(e) {
+            e.preventDefault();
+            const form = document.getElementById('llm-form');
+            const fd = new FormData(form);
+            const resp = await fetch('/api/settings/llm', { method: 'PUT', body: fd });
+            const data = await resp.json();
+            const r = document.getElementById('result');
+            if (data.ok) { r.className = 'result-box success'; r.textContent = '设置已保存'; }
+            else { r.className = 'result-box error'; r.textContent = '保存失败'; }
+        }
+
+        async function testLLM() {
+            const r = document.getElementById('result');
+            r.className = 'result-box'; r.textContent = '测试中...'; r.style.display = 'block';
+            const resp = await fetch('/api/settings/llm/test', { method: 'POST' });
+            const data = await resp.json();
+            r.className = data.ok ? 'result-box success' : 'result-box error';
+            r.textContent = data.message;
+        }
+    </script>
+</body>
+</html>

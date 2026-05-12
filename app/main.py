@@ -14,6 +14,7 @@ from app.core.gateway import gateway
 from app.core.router import dynamic_router, register_all_workflows
 from app.manager.config_manager import config_manager
 from app.manager.server_manager import server_manager
+from app.manager.settings_manager import settings_manager
 from app.manager.stats import stats_manager
 from app.utils.logger import setup_logging, get_logger
 from app.web.admin import admin_router
@@ -24,6 +25,7 @@ logger = get_logger(__name__)
 setup_logging()
 server_manager.load_servers()
 config_manager.load_all()
+settings_manager.load()
 register_all_workflows(dynamic_router)
 
 logger.info("=" * 50)
@@ -55,7 +57,7 @@ app = FastAPI(
 
 # 静态文件
 static_dir = Path(__file__).resolve().parent / "web" / "static"
-app.mount("/admin/static", StaticFiles(directory=str(static_dir)), name="admin_static")
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="admin_static")
 
 # 注册路由
 app.include_router(dynamic_router)

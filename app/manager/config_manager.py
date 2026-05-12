@@ -107,11 +107,123 @@ class ConfigManager:
 
     # ── AI 审核相关 ─────────────────────────────────
 
-    def analyze_workflow_json(self, workflow: dict) -> WorkflowConfig:
+    async def analyze_workflow_json(self, workflow: dict) -> WorkflowConfig:
         """
-        分析 ComfyUI workflow JSON，自动识别可配置参数，
-        生成推荐的 WorkflowConfig，供管理面板 AI 审核使用。
+        使用 LLM 分析 ComfyUI workflow JSON，自动识别可配置参数。
+        如果 LLM 未配置或失败，回退到规则匹配。
         """
+        from app.manager.settings_manager import settings_manager
+        llm = settings_manager.get_llm_config()
+
+        # 尝试 LLM 分析
+        try:
+            result = await self._analyze_with_llm(workflow, llm)
+            if result is not None:
+                return result
+        except Exception as e:
+            logger.warning(f"LLM analysis failed, fallback to rule-based: {e}")
+
+        # 回退到规则匹配
+        return self._analyze_rule_based(workflow)
+
+    async def _analyze_with_llm(self, workflow: dict, llm) -> WorkflowConfig | None:
+        """使用 LLM 分析 workflow JSON"""
+        import json
+        import httpx
+        import os
+
+        api_key = llm.get_api_key()
+        if llm.provider in ("openai", "custom") and not api_key:
+            logger.info("LLM not configured, skipping")
+            return None
+
+        system_prompt = (
+            "你是一个 ComfyUI workflow 分析助手。"
+            "分析给定的 workflow JSON，识别所有可以暴露给 API 用户的参数。"
+            "对于每个参数，判断其名称(name)、类型(type: string/integer/float/boolean)、"
+            "是否必填(required)、默认值(default)、描述(description)、"
+            "以及注入目标(inject_to: node_id 和 field)。"
+            "参数类型规则："
+            "- CLIPTextEncode 节点的 text 字段 → type: string"
+            "- EmptyLatentImage 节点的 width/height → type: integer"
+            "- KSampler 节点的 seed/steps/cfg → type: integer"
+            "- LoadImage 节点的 image 字段 → type: image_sequence (如果需要多图)"
+            "- CheckpointLoaderSimple 节点的 ckpt_name → type: string"
+            "找到 output_node_id：通常是 SaveImage、VHS_VideoCombine 等节点的 ID。"
+            "请只返回 JSON，格式如下："
+            '{"inputs": [...], "output_node_id": "9"}'
+        )
+
+        workflow_str = json.dumps(workflow, indent=2, ensure_ascii=False)
+
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        body = {
+            "model": llm.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"分析以下 ComfyUI workflow JSON：\n```json\n{workflow_str}\n```"},
+            ],
+            "temperature": llm.temperature,
+            "max_tokens": llm.max_tokens,
+            "response_format": {"type": "json_object"},
+        }
+
+        base_url = llm.get_base_url()
+        url = f"{base_url}/chat/completions"
+        if not url.startswith("http"):
+            url = f"https://{url}"
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+
+        # 解析 LLM 响应
+        parsed = json.loads(content)
+        llm_inputs = parsed.get("inputs", [])
+        llm_output = parsed.get("output_node_id", "")
+
+        # 将 LLM 返回转为 WorkflowInput
+        from app.models.workflow import WorkflowInput, InputType, InjectTo
+        inputs = []
+        for inp in llm_inputs:
+            try:
+                itype = InputType(inp.get("type", "string"))
+            except ValueError:
+                itype = InputType.STRING
+
+            inject_data = inp.get("inject_to", {})
+            inputs.append(WorkflowInput(
+                name=inp.get("name", ""),
+                type=itype,
+                required=inp.get("required", True),
+                default=inp.get("default"),
+                description=inp.get("description", ""),
+                inject_to=InjectTo(
+                    node_id=str(inject_data.get("node_id", "")),
+                    field=str(inject_data.get("field", "")),
+                    nodes=inject_data.get("nodes"),
+                    type=inject_data.get("type"),
+                ),
+            ))
+
+        return WorkflowConfig(
+            name="New Workflow",
+            route="/new-workflow",
+            description="LLM auto-analyzed workflow",
+            workflow_file="",
+            timeout=120,
+            backend_servers=[],
+            inputs=inputs,
+            output_node_id=str(llm_output),
+        )
+
+    def _analyze_rule_based(self, workflow: dict) -> WorkflowConfig:
+        """规则匹配分析：回退方案"""
         inputs = []
         output_node_id = ""
 
@@ -142,7 +254,7 @@ class ConfigManager:
                             "inject_to": {"node_id": node_id, "field": field},
                         })
 
-            elif class_type == "KSampler" or class_type == "KSamplerAdvanced":
+            elif class_type in ("KSampler", "KSamplerAdvanced"):
                 for field in ["seed", "steps", "cfg"]:
                     if field in node_inputs:
                         val = node_inputs[field]
@@ -157,16 +269,12 @@ class ConfigManager:
                         })
 
             elif class_type == "LoadImage":
-                image_val = node_inputs.get("image", "")
-                if image_val and image_val.startswith("{{"):
-                    # 已经是模板占位符
-                    pass
+                pass  # 由 LLM 处理更合适
 
             elif class_type in ("SaveImage", "VHS_VideoCombine", "SaveImageWebsocket"):
                 if not output_node_id:
                     output_node_id = node_id
 
-        # 合并重复的 seed/steps/cfg
         seen = set()
         merged = []
         for inp in inputs:
@@ -178,8 +286,7 @@ class ConfigManager:
         return WorkflowConfig(
             name="New Workflow",
             route="/new-workflow",
-            method="POST",
-            description="Auto-analyzed workflow",
+            description="Rule-based analyzed workflow",
             workflow_file="",
             timeout=120,
             backend_servers=[],

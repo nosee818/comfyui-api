@@ -7,11 +7,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.manager.config_manager import config_manager
 from app.manager.server_manager import server_manager
+from app.manager.settings_manager import settings_manager
 from app.manager.stats import stats_manager
 from app.models.workflow import WorkflowConfig, WorkflowInput
 from app.config import settings
 
-admin_router = APIRouter(prefix="/admin", tags=["admin"])
+admin_router = APIRouter(prefix="", tags=["admin"])
 
 # Jinja2 模板路径
 from fastapi.templating import Jinja2Templates
@@ -59,6 +60,15 @@ async def stats_page(request: Request):
     return templates.TemplateResponse(
         request, "stats.html",
         {"request": request, "stats": all_stats, "recent": recent},
+    )
+
+
+@admin_router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    llm = settings_manager.get_llm_config()
+    return templates.TemplateResponse(
+        request, "settings.html",
+        {"request": request, "llm": llm.to_dict()},
     )
 
 
@@ -111,7 +121,7 @@ async def analyze_workflow(workflow_file: UploadFile = File(...)):
     except json.JSONDecodeError as e:
         raise HTTPException(400, f"Invalid JSON: {e}")
 
-    suggested = config_manager.analyze_workflow_json(workflow)
+    suggested = await config_manager.analyze_workflow_json(workflow)
     return suggested.model_dump()
 
 
@@ -149,3 +159,38 @@ async def get_stats():
 @admin_router.get("/api/tasks/recent")
 async def get_recent_tasks(limit: int = 50):
     return await stats_manager.get_recent_tasks(limit)
+
+
+# ── 设置 API ────────────────────────────────────────
+
+@admin_router.get("/api/settings/llm")
+async def get_llm_settings():
+    return settings_manager.get_llm_config().to_dict()
+
+
+@admin_router.put("/api/settings/llm")
+async def update_llm_settings(
+    provider: str = Form("openai"),
+    api_base: str = Form(""),
+    api_key: str = Form(""),
+    model: str = Form(""),
+    temperature: float = Form(0.1),
+    max_tokens: int = Form(2048),
+):
+    from app.manager.settings_manager import LLMConfig
+    config = LLMConfig(
+        provider=provider,
+        api_base=api_base,
+        api_key=api_key,
+        model=model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    settings_manager.update_llm_config(config)
+    return {"ok": True, "config": config.to_dict()}
+
+
+@admin_router.post("/api/settings/llm/test")
+async def test_llm():
+    result = await settings_manager.test_llm_connection()
+    return result

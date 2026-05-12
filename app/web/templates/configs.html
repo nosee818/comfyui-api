@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>工作流管理 - ComfyUI Gateway</title>
-    <link rel="stylesheet" href="/admin/static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <nav>
         <span class="brand">ComfyUI Gateway</span>
-        <a href="/admin/">概览</a>
-        <a href="/admin/configs" class="active">工作流</a>
-        <a href="/admin/servers">服务器</a>
-        <a href="/admin/stats">统计</a>
+        <a href="/">概览</a>
+        <a href="/configs" class="active">工作流</a>
+        <a href="/servers">服务器</a>
+        <a href="/stats">统计</a>
+        <a href="/settings">设置</a>
         <a href="/docs" target="_blank">API 文档</a>
     </nav>
     <main>
@@ -22,7 +23,7 @@
                 <p class="subtitle">管理所有 API 端点对应的 ComfyUI workflow</p>
             </div>
             <div style="display:flex;gap:8px">
-                <a href="/admin/configs/new" class="btn btn-primary">+ 新建</a>
+                <a href="/configs/new" class="btn btn-primary">+ 新建</a>
                 <button class="btn" onclick="reloadConfigs()">重新加载</button>
             </div>
         </div>
@@ -60,14 +61,14 @@
     </main>
     <script>
         async function reloadConfigs() {
-            const resp = await fetch('/admin/api/reload', { method:'POST' });
+            const resp = await fetch('/api/reload', { method:'POST' });
             const data = await resp.json();
             alert(`已重载 ${data.count} 个工作流`);
             location.reload();
         }
         async function deleteConfig(route) {
             if (!confirm(`确定删除 ${route}？`)) return;
-            await fetch(`/admin/api/configs/${route}`, { method:'DELETE' });
+            await fetch(`/api/configs/${route}`, { method:'DELETE' });
             location.reload();
         }
     </script>
