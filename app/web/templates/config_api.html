@@ -16,6 +16,15 @@
         .copy-btn { padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.15s; }
         .copy-btn:hover { background: rgba(88,166,255,0.1); }
         .copy-btn.copied { background: rgba(63,185,80,0.15); border-color: var(--green); color: var(--green); }
+        .test-field { margin-bottom: 12px; }
+        .test-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+        .test-field input, .test-field textarea { width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 13px; font-family: inherit; }
+        .test-field input:focus, .test-field textarea:focus { outline: none; border-color: var(--accent); }
+        .test-field textarea { min-height: 60px; resize: vertical; }
+        .test-result { margin-top: 12px; padding: 14px; border-radius: 6px; display: none; }
+        .test-result.ok { display: block; background: rgba(63,185,80,0.08); border: 1px solid var(--green); }
+        .test-result.err { display: block; background: rgba(248,81,73,0.08); border: 1px solid var(--red); }
+        .test-result .code-block { margin-top: 8px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -77,6 +86,44 @@
             <button class="copy-btn" style="margin-top:8px" onclick="copyCurl()">复制 curl 命令</button>
         </div>
 
+        <!-- 在线测试 -->
+        <div class="api-card">
+            <h3>在线测试</h3>
+            <p class="text-muted" style="font-size:13px;margin-bottom:16px">填入参数值，点击发送即可调用 API</p>
+            <form id="test-form" onsubmit="runTest(event)">
+                {% for inp in config.inputs %}
+                <div class="test-field">
+                    <label>
+                        {{ inp.name }}
+                        <span style="color:var(--muted)">({{ inp.type.value }}{% if inp.required %}, 必填{% endif %})</span>
+                    </label>
+                    {% if inp.type.value == 'image_sequence' %}
+                    <input type="file" name="{{ inp.name }}" accept="image/*">
+                    <div class="hint-row">支持多张图片</div>
+                    {% elif inp.type.value == 'string' and inp.description and 'CLIPTextEncode' in inp.description %}
+                    <textarea name="{{ inp.name }}" placeholder="{{ inp.description }}">{% if inp.default is not none and inp.default != '' %}{{ inp.default }}{% endif %}</textarea>
+                    {% elif inp.type.value == 'boolean' %}
+                    <input type="checkbox" name="{{ inp.name }}" {% if inp.default %}checked{% endif %} style="width:auto">
+                    {% else %}
+                    <input type="{{ 'number' if inp.type.value in ('integer','float') else 'text' }}" name="{{ inp.name }}"
+                           placeholder="{{ inp.description }}" value="{{ inp.default if inp.default is not none and inp.default != '' else '' }}">
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if config.inputs %}
+                <button type="submit" class="btn btn-primary" style="padding:10px 24px">发送测试</button>
+                {% else %}
+                <p class="text-muted">该 API 无需参数</p>
+                <button type="submit" class="btn btn-primary" style="padding:10px 24px">发送测试</button>
+                {% endif %}
+                <span id="test-status" style="margin-left:12px;font-size:13px;display:none"></span>
+            </form>
+            <div id="test-result" class="test-result"></div>
+            <div id="task-link" style="margin-top:10px;display:none">
+                <a class="btn" id="task-link-btn" href="#">查看任务状态</a>
+            </div>
+        </div>
+
         <!-- 响应 -->
         <div class="api-card">
             <h3>响应格式</h3>
@@ -136,6 +183,33 @@
         function copyCurl() {
             const text = document.getElementById('curl-example').textContent;
             doCopy(text, function() { alert('curl 命令已复制'); });
+        }
+
+        async function runTest(e) {
+            e.preventDefault();
+            const status = document.getElementById('test-status');
+            const result = document.getElementById('test-result');
+            const link = document.getElementById('task-link');
+            status.textContent = '发送中...'; status.style.display = 'inline'; status.style.color = 'var(--yellow)';
+            result.className = 'test-result'; result.style.display = 'none';
+
+            const fd = new FormData(e.target);
+            const resp = await fetch('{{ config.route }}', { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (resp.ok) {
+                status.textContent = '已提交'; status.style.color = 'var(--green)';
+                result.className = 'test-result ok';
+                result.innerHTML = '<strong>任务已创建</strong><div class="code-block">' + JSON.stringify(data, null, 2) + '</div>';
+                if (data.task_id) {
+                    link.style.display = 'block';
+                    document.getElementById('task-link-btn').href = '/task/' + data.task_id;
+                }
+            } else {
+                status.textContent = '失败'; status.style.color = 'var(--red)';
+                result.className = 'test-result err';
+                result.innerHTML = '<strong>请求失败</strong><div class="code-block">' + JSON.stringify(data, null, 2) + '</div>';
+            }
         }
     </script>
 </body>
