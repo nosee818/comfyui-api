@@ -275,8 +275,8 @@
             pollingTimer = setInterval(async function() {
                 try {
                     const resp = await fetch('/task/' + taskId);
+                    if (!resp.ok) return;  // 404 等 HTTP 错误
                     const task = await resp.json();
-                    if (task.error) { /* 404 etc */ return; }
 
                     // 状态更新
                     const status = task.status;
