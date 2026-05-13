@@ -102,7 +102,7 @@ class ComfyUIClient:
         resp = await http.post(
             f"{self.base_url}/prompt",
             json=payload,
-            timeout=httpx.Timeout(connect=10.0, read=30.0),
+            timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=5.0),
         )
         resp.raise_for_status()
         result = resp.json()
