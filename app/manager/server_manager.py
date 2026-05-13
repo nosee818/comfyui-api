@@ -22,6 +22,7 @@ class ServerManager:
         self._servers: dict[str, BackendServer] = {}
         self._status: dict[str, dict] = {}  # server_id → {online, queue_remaining, last_checked}
         self._load_index: dict[str, int] = {}  # round-robin 计数器
+        self._global_rr: int = 0              # 全局轮询计数器
         self._lock = asyncio.Lock()
 
     # ── 加载配置 ────────────────────────────────────
@@ -60,7 +61,7 @@ class ServerManager:
         return [s for s in self._servers.values() if self._status.get(s.id, {}).get("online")]
 
     def get_available(self, server_ids: list[str]) -> BackendServer | None:
-        """从指定 ID 列表中选择一个可用的服务器（round-robin）"""
+        """从指定 ID 列表中选择一个可用的服务器（全局 round-robin）"""
         candidates = [
             s for sid in server_ids
             if (s := self._servers.get(sid)) and self._status.get(sid, {}).get("online")
@@ -68,10 +69,10 @@ class ServerManager:
         if not candidates:
             return None
 
-        # round-robin
-        idx = self._load_index.get(server_ids[0], 0)
-        chosen = candidates[idx % len(candidates)]
-        self._load_index[chosen.id] = (self._load_index.get(chosen.id, 0) + 1) % 10000
+        # 全局轮询：所有 API 共享一个计数器，确保负载均匀分布
+        idx = self._global_rr % len(candidates)
+        self._global_rr = (self._global_rr + 1) % 100000
+        chosen = candidates[idx]
         return chosen
 
     def get_server_status(self, server_id: str) -> dict:

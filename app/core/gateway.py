@@ -120,6 +120,7 @@ class Gateway:
         return TaskResponse(
             task_id=task_id,
             status=TaskStatus.PENDING,
+            backend_server=f"{server.host}:{server.port}",
         )
 
     async def _execute_background(

@@ -25,6 +25,21 @@
         .test-result.ok { display: block; background: rgba(63,185,80,0.08); border: 1px solid var(--green); }
         .test-result.err { display: block; background: rgba(248,81,73,0.08); border: 1px solid var(--red); }
         .test-result .code-block { margin-top: 8px; font-size: 12px; }
+        /* 弹窗 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 560px; max-height: 80vh; overflow-y: auto; }
+        .modal-box h2 { font-size: 18px; margin-bottom: 20px; }
+        .status-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; font-size: 14px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .status-dot.pending { background: var(--yellow); animation: pulse 1s infinite; }
+        .status-dot.running { background: var(--accent); animation: pulse 0.5s infinite; }
+        .status-dot.completed { background: var(--green); }
+        .status-dot.failed { background: var(--red); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .progress-bar { width: 100%; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+        .progress-bar .fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+        .output-img { max-width: 200px; max-height: 200px; border-radius: 6px; margin: 4px; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -156,6 +171,30 @@
             <a href="/configs/edit/{{ config.route.lstrip('/') }}" class="btn">编辑</a>
         </div>
     </main>
+
+    <!-- 任务追踪弹窗 -->
+    <div class="modal-overlay" id="task-modal">
+        <div class="modal-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h2 style="margin:0">任务追踪</h2>
+                <button class="btn" onclick="closeModal()" style="padding:4px 12px">✕</button>
+            </div>
+            <div class="status-row">
+                <span class="status-dot pending" id="modal-dot"></span>
+                <span id="modal-status">等待中...</span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="modal-progress" style="width:0%"></div></div>
+            <div id="modal-server" class="text-muted" style="font-size:13px;margin:8px 0"></div>
+            <div id="modal-task-id" class="text-muted" style="font-size:11px;font-family:monospace;word-break:break-all"></div>
+            <div id="modal-error" style="color:var(--red);font-size:13px;margin-top:8px;display:none"></div>
+            <div id="modal-outputs" style="margin-top:12px"></div>
+            <div style="margin-top:20px;display:flex;gap:8px">
+                <button class="btn" onclick="closeModal()">关闭</button>
+                <button class="btn btn-danger" id="modal-cancel-btn" onclick="cancelTask()" style="display:none">取消任务</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function doCopy(text, onSuccess) {
             if (navigator.clipboard && window.isSecureContext) {
@@ -185,31 +224,106 @@
             doCopy(text, function() { alert('curl 命令已复制'); });
         }
 
+        // ── 任务追踪弹窗 ──
+        let pollingTimer = null;
+        let currentTaskId = null;
+
+        function openModal() { document.getElementById('task-modal').classList.add('show'); }
+        function closeModal() {
+            document.getElementById('task-modal').classList.remove('show');
+            if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+        }
+
         async function runTest(e) {
             e.preventDefault();
-            const status = document.getElementById('test-status');
             const result = document.getElementById('test-result');
-            const link = document.getElementById('task-link');
-            status.textContent = '发送中...'; status.style.display = 'inline'; status.style.color = 'var(--yellow)';
             result.className = 'test-result'; result.style.display = 'none';
+            document.getElementById('test-status').textContent = '发送中...'; document.getElementById('test-status').style.display = 'inline';
 
             const fd = new FormData(e.target);
             const resp = await fetch('{{ config.route }}', { method: 'POST', body: fd });
             const data = await resp.json();
 
-            if (resp.ok) {
-                status.textContent = '已提交'; status.style.color = 'var(--green)';
-                result.className = 'test-result ok';
-                result.innerHTML = '<strong>任务已创建</strong><div class="code-block">' + JSON.stringify(data, null, 2) + '</div>';
-                if (data.task_id) {
-                    link.style.display = 'block';
-                    document.getElementById('task-link-btn').href = '/task/' + data.task_id;
-                }
-            } else {
-                status.textContent = '失败'; status.style.color = 'var(--red)';
+            if (!resp.ok) {
+                document.getElementById('test-status').textContent = '请求失败'; document.getElementById('test-status').style.color = 'var(--red)';
                 result.className = 'test-result err';
-                result.innerHTML = '<strong>请求失败</strong><div class="code-block">' + JSON.stringify(data, null, 2) + '</div>';
+                result.innerHTML = '<div class="code-block">' + JSON.stringify(data, null, 2) + '</div>';
+                return;
             }
+
+            // 成功提交 → 弹窗追踪
+            document.getElementById('test-status').textContent = '已提交'; document.getElementById('test-status').style.color = 'var(--green)';
+            currentTaskId = data.task_id;
+            document.getElementById('modal-task-id').textContent = 'Task ID: ' + currentTaskId;
+            document.getElementById('modal-server').textContent = '后端服务器: ' + (data.backend_server || '未知');
+            openModal();
+            startPolling(currentTaskId);
+        }
+
+        function startPolling(taskId) {
+            const dot = document.getElementById('modal-dot');
+            const statusEl = document.getElementById('modal-status');
+            const progressBar = document.getElementById('modal-progress');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            const errEl = document.getElementById('modal-error');
+            const outputsEl = document.getElementById('modal-outputs');
+
+            cancelBtn.style.display = 'inline-block';
+            errEl.style.display = 'none';
+            outputsEl.innerHTML = '';
+
+            pollingTimer = setInterval(async function() {
+                try {
+                    const resp = await fetch('/task/' + taskId);
+                    const task = await resp.json();
+                    if (task.error) { /* 404 etc */ return; }
+
+                    // 状态更新
+                    const status = task.status;
+                    dot.className = 'status-dot ' + status;
+                    statusEl.textContent = {pending:'排队中',running:'执行中',completed:'已完成',failed:'失败',cancelled:'已取消'}[status] || status;
+
+                    // 进度条
+                    if (task.progress_max > 0) {
+                        progressBar.style.width = (task.progress / task.progress_max * 100) + '%';
+                    } else if (status === 'running') {
+                        progressBar.style.width = '50%';
+                    } else if (status === 'completed') {
+                        progressBar.style.width = '100%';
+                    }
+
+                    // 服务器
+                    if (task.backend_server) {
+                        document.getElementById('modal-server').textContent = '后端服务器: ' + task.backend_server;
+                    }
+
+                    // 错误
+                    if (task.error) {
+                        errEl.textContent = '错误: ' + task.error;
+                        errEl.style.display = 'block';
+                    }
+
+                    // 输出图片
+                    if (task.outputs && task.outputs.length) {
+                        outputsEl.innerHTML = '<strong style="font-size:13px">输出结果:</strong><div style="margin-top:8px">' +
+                            task.outputs.map(function(o) {
+                                return '<a href="' + o.url + '" target="_blank"><img class="output-img" src="' + o.url + '" title="' + o.filename + '"></a>';
+                            }).join('') + '</div>';
+                    }
+
+                    // 完成/失败 → 停止轮询
+                    if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+                        clearInterval(pollingTimer); pollingTimer = null;
+                        cancelBtn.style.display = 'none';
+                    }
+                } catch(e) { /* 忽略 */ }
+            }, 2000);
+        }
+
+        async function cancelTask() {
+            if (!currentTaskId) return;
+            await fetch('/task/' + currentTaskId + '/cancel', { method:'POST' });
+            document.getElementById('modal-cancel-btn').style.display = 'none';
         }
     </script>
 </body>

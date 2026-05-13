@@ -27,6 +27,7 @@ class TaskResponse(BaseModel):
     task_id: str
     status: TaskStatus = TaskStatus.PENDING
     message: str = "Task submitted"
+    backend_server: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
 
 
