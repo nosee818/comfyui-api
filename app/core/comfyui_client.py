@@ -34,7 +34,12 @@ class ComfyUIClient:
     async def _get_http(self) -> httpx.AsyncClient:
         if self._http is None:
             self._http = httpx.AsyncClient(
-                timeout=httpx.Timeout(self.timeout),
+                timeout=httpx.Timeout(
+                    connect=10.0,           # 连接超时 10 秒，快速判定不可达
+                    read=self.timeout,      # 读取超时跟随 config（生图可能很久）
+                    write=30.0,
+                    pool=10.0,
+                ),
                 limits=httpx.Limits(max_keepalive_connections=5),
             )
         return self._http
@@ -95,7 +100,9 @@ class ComfyUIClient:
             "client_id": self._client_id,
         }
         resp = await http.post(
-            f"{self.base_url}/prompt", json=payload
+            f"{self.base_url}/prompt",
+            json=payload,
+            timeout=httpx.Timeout(connect=10.0, read=30.0),
         )
         resp.raise_for_status()
         result = resp.json()

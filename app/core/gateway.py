@@ -179,6 +179,11 @@ class Gateway:
 
         except Exception as e:
             error_msg = str(e)
+            # 识别常见错误类型，给更友好的提示
+            if "ConnectError" in type(e).__name__ or "connect" in error_msg.lower():
+                error_msg = f"无法连接后端服务器 {server.host}:{server.port}"
+            elif "Timeout" in type(e).__name__ or "timeout" in error_msg.lower():
+                error_msg = f"后端服务器 {server.host}:{server.port} 响应超时"
             logger.error(f"Task {task_id} failed: {error_msg}")
             self._tasks[task_id].update({
                 "status": TaskStatus.FAILED,
