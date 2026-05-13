@@ -123,8 +123,8 @@ class ComfyUIClient:
         self, prompt_id: str, ws: WSConnection
     ) -> dict[str, Any]:
         """
-        监听 WebSocket 直到获取执行结果。
-        返回 {"success": bool, "outputs": {...}, "error": str|None}
+        监听 WebSocket 直到执行完成，返回 {"success": bool, "outputs": {...}, "error": str|None}
+        等待 execution_success 后通过 history API 获取完整输出。
         """
         try:
             while True:
@@ -141,21 +141,20 @@ class ComfyUIClient:
                         "traceback": data.get("traceback", ""),
                     }
 
-                if msg_type == "executed":
+                if msg_type == "execution_success":
                     data = msg.get("data", {})
                     if data.get("prompt_id") == prompt_id:
+                        # 从 history 获取完整输出
+                        try:
+                            history = await self.get_history(prompt_id)
+                            outputs = history.get(prompt_id, {}).get("outputs", {})
+                        except Exception:
+                            outputs = {}
                         return {
                             "success": True,
-                            "outputs": data.get("output", {}),
+                            "outputs": outputs,
                             "error": None,
                         }
-
-                if msg_type == "executing":
-                    data = msg.get("data", {})
-                    if data.get("prompt_id") == prompt_id and data.get("node") is None:
-                        # 执行完成但可能没有 executed 消息（老版本）
-                        # 稍等再收一条
-                        continue
 
         except asyncio.TimeoutError:
             return {
