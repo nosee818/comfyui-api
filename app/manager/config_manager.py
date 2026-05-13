@@ -166,7 +166,7 @@ class ConfigManager:
             "以及注入目标(inject_to: node_id 和 field)。"
             "参数类型规则："
             "- CLIPTextEncode 节点的 text 字段 → type: string"
-            "- EmptyLatentImage 节点的 width/height → type: integer"
+            "- EmptyLatentImage / EmptySD3LatentImage / EmptyFluxLatentImage 等节点的 width/height → type: integer, batch_size → type: integer"
             "- KSampler 节点的 seed/steps/cfg → type: integer"
             "- LoadImage 节点的 image 字段 → type: image_sequence (如果需要多图)"
             "- CheckpointLoaderSimple 节点的 ckpt_name → type: string"
@@ -263,7 +263,7 @@ class ConfigManager:
                         "inject_to": {"node_id": node_id, "field": "text"},
                     })
 
-            elif class_type == "EmptyLatentImage":
+            elif "Empty" in class_type and "Latent" in class_type:
                 for field in ["width", "height", "batch_size"]:
                     if field in node_inputs:
                         inputs.append({
