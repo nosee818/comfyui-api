@@ -267,6 +267,19 @@ async def delete_server(server_id: str):
     return {"ok": True}
 
 
+@admin_router.put("/api/servers/{server_id}")
+async def update_server(
+    server_id: str,
+    name: str = Form(...),
+    host: str = Form(...),
+    port: int = Form(8188),
+):
+    ok = server_manager.update_server(server_id, name=name, host=host, port=port)
+    if not ok:
+        raise HTTPException(404, "Server not found")
+    return {"ok": True}
+
+
 @admin_router.get("/api/stats")
 async def get_stats():
     return await stats_manager.get_all_stats()

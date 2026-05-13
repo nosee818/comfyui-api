@@ -114,6 +114,17 @@ class ServerManager:
         logger.info(f"Removed server: {server.name}")
         return True
 
+    def update_server(self, sid: str, name: str, host: str, port: int) -> bool:
+        server = self._servers.get(sid)
+        if server is None:
+            return False
+        server.name = name
+        server.host = host
+        server.port = port
+        self._save_to_yaml()
+        logger.info(f"Updated server: {name} ({host}:{port})")
+        return True
+
     def _save_to_yaml(self):
         """保存服务器列表到 YAML"""
         path = settings.servers_config_path

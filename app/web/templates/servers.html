@@ -84,8 +84,18 @@
             <tbody id="server-list">
                 {% for s in status_list %}
                 <tr id="row-{{ s.server_id }}">
-                    <td>{{ s.name }}</td>
-                    <td><code>{{ s.host }}:{{ s.port }}</code></td>
+                    <td>
+                        <span class="view-mode">{{ s.name }}</span>
+                        <input class="edit-mode" type="text" value="{{ s.name }}" style="display:none;width:120px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+                    </td>
+                    <td>
+                        <span class="view-mode"><code>{{ s.host }}:{{ s.port }}</code></span>
+                        <span class="edit-mode" style="display:none;gap:4px">
+                            <input class="edit-host" type="text" value="{{ s.host }}" style="width:100px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+                            <span style="color:var(--muted)">:</span>
+                            <input class="edit-port" type="number" value="{{ s.port }}" style="width:70px;padding:3px 6px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px">
+                        </span>
+                    </td>
                     <td>
                         {% if s.online %}
                         <span class="badge online">在线</span>
@@ -95,8 +105,14 @@
                     </td>
                     <td>{{ s.queue_remaining }}</td>
                     <td class="text-muted">{{ s.last_checked or '未检查' }}</td>
-                    <td>
-                        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px"
+                    <td style="white-space:nowrap">
+                        <button class="btn view-mode" style="padding:3px 8px;font-size:11px;margin-right:2px"
+                                onclick="editServer('{{ s.server_id }}')">编辑</button>
+                        <button class="btn btn-primary edit-mode" style="padding:3px 8px;font-size:11px;margin-right:2px;display:none"
+                                onclick="saveServer('{{ s.server_id }}')">保存</button>
+                        <button class="btn edit-mode" style="padding:3px 8px;font-size:11px;margin-right:2px;display:none"
+                                onclick="cancelEdit('{{ s.server_id }}')">取消</button>
+                        <button class="btn btn-danger view-mode" style="padding:3px 8px;font-size:11px"
                                 onclick="deleteServer('{{ s.server_id }}')">删除</button>
                     </td>
                 </tr>
@@ -154,6 +170,30 @@
             if (!confirm('确定删除该服务器？')) return;
             const resp = await fetch('/api/servers/' + id, { method: 'DELETE' });
             if (resp.ok) { location.reload(); }
+        }
+
+        function editServer(id) {
+            var row = document.getElementById('row-' + id);
+            row.querySelectorAll('.view-mode').forEach(function(el) { el.style.display = 'none'; });
+            row.querySelectorAll('.edit-mode').forEach(function(el) { el.style.display = ''; });
+        }
+
+        function cancelEdit(id) {
+            var row = document.getElementById('row-' + id);
+            row.querySelectorAll('.view-mode').forEach(function(el) { el.style.display = ''; });
+            row.querySelectorAll('.edit-mode').forEach(function(el) { el.style.display = 'none'; });
+        }
+
+        async function saveServer(id) {
+            var row = document.getElementById('row-' + id);
+            var name = row.querySelector('.edit-mode input[type=text]').value;
+            var host = row.querySelector('.edit-host').value;
+            var port = row.querySelector('.edit-port').value;
+            var fd = new FormData();
+            fd.append('name', name); fd.append('host', host); fd.append('port', port);
+            var resp = await fetch('/api/servers/' + id, { method: 'PUT', body: fd });
+            if (resp.ok) { location.reload(); }
+            else { alert('保存失败'); }
         }
 
         async function checkServers() {
