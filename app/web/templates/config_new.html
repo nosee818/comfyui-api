@@ -78,7 +78,7 @@
 
     <script>
         const isEdit = {{ 'true' if edit_mode else 'false' }};
-        const editData = {{ ('JSON.parse(' + (edit_config | tojson | safe) + ')' ) if edit_mode else 'null' }};
+        const editData = {{ (edit_config | tojson | safe) if edit_mode else 'null' }};
         let analyzedInputs = [];
         let selectedInputs = [];
         let wfJsonContent = null;
